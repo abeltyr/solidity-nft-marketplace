@@ -1,0 +1,273 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.2;
+
+import "./interfaces/INftStore.sol";
+import "./NftMarket.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+contract NftFixedFractionalOwnershipMarket is ERC20 {
+  using Counters for Counters.Counter;
+  Counters.Counter private itemCount;
+
+  uint256 public totoalBids;
+  address private storeAddress;
+
+  constructor(
+    string memory _name,
+    string memory _symbol,
+    address _storeAddress
+  ) ERC20("OwnershipToken", "OST") {
+    storeAddress = _storeAddress;
+  }
+
+  struct Listing {
+    /// @notice A unique id to identify the listing.
+    uint256 id;
+    /// @notice Address of the smart-contract of the nft to sell.
+    IERC721 tokenAddress;
+    /// @notice Id of the nft in the smart-contract.
+    uint256 tokenId;
+    /// @notice The nft seller.
+    address seller;
+    /// @notice Price of a single share.
+    uint256 sharePrice;
+    /// @notice Total number of share.
+    uint256 totalSupply;
+    /// @notice Total number of available shares.
+    /// @dev Is equal to totalSupply initially.
+    uint256 availableShares;
+    /// @notice Date to start receiving bids.
+    uint256 startDate;
+    /// @notice Date to stop receiving bids.
+    uint256 endDate;
+    /// @notice Date at which the auction is closed.
+    /// @dev Is null initially.
+    uint256 closeDate;
+    /// @notice total number of share holder for the listing.
+    /// @dev Is 0 initially.
+    uint256 noOfShareHolders;
+  }
+
+  struct Bidder {
+    // number of shares
+    uint256 shares;
+    // amount invested for bidding
+    uint256 amount;
+  }
+
+  IERC20 public dai;
+  // listingId -> Listing
+  mapping(uint256 => Listing) public listings;
+
+  // mapping for holding the information of Bidders of each listing
+  // listingId -> address => sharesBidded
+  mapping(uint256 => mapping(address => Bidder)) public bidders;
+
+  // totoalBids => address of address Of Bidders
+  mapping(uint256 => address) public addressOfBidders;
+
+  /// @dev Emitted when a new auction is listed.
+  event List(
+    uint256 auctionId,
+    uint256 tokenId,
+    IERC721 tokenAddress,
+    address seller,
+    uint256 startDate,
+    uint256 endDate,
+    uint256 startingPrice
+  );
+
+  /// @dev Emitted when a bid is placed.
+  event Buy(uint256 auctionId, address bidder, uint256 bid);
+
+  /// @dev Emitted when an auction is closed by any mechanism.
+  event Close(uint256 auctionId);
+
+  /// @dev Emitted when a bidder withdraw his fund.
+  event Withdraw(uint256 auctionId, address withdrawer);
+
+  function list(
+    IERC721 tokenAddress,
+    uint256 tokenId,
+    uint256 sharePrice,
+    uint256 totalSupply,
+    uint256 startDate,
+    uint256 endDate
+  ) external {
+    if (startDate == 0) {
+      startDate = block.timestamp;
+    } else {
+      require(startDate >= block.timestamp, "startDate is in the past");
+    }
+    require(endDate > startDate, "endDate is not older then startDate");
+    require(msg.sender == tokenAddress.ownerOf(tokenId), "dvdc");
+
+    INftStore _store = INftStore(storeAddress);
+
+    require(
+      _store.isMarketApproved(address(this)) == true,
+      "market is not an approved yet"
+    );
+    require(
+      _store.isProviderApproved(IERC721(tokenAddress)) == true,
+      "nftAddress is an not approved provider"
+    );
+
+    itemCount.increment();
+
+    uint256 itemId = itemCount.current();
+    _store.reserve(IERC721(tokenAddress), tokenId, msg.sender);
+
+    // construct listing item
+    // default close date is null and will update in buy function
+    // In starting buyer address is null  and will update in buy function
+    uint256 closeDate = 0;
+
+    // initially 0 shareHolders
+    uint256 noOfShareHolders = 0;
+
+    uint256 availableShares = totalSupply;
+
+    listings[itemId] = Listing(
+      itemId,
+      tokenAddress,
+      tokenId,
+      payable(msg.sender),
+      sharePrice,
+      totalSupply,
+      availableShares,
+      startDate,
+      endDate,
+      closeDate,
+      noOfShareHolders
+    );
+
+    // emit list event
+    emit List(
+      itemId,
+      tokenId,
+      tokenAddress,
+      payable(msg.sender),
+      startDate,
+      endDate,
+      sharePrice
+    );
+  }
+
+  function priceOf(uint256 listingId, address shareHolder)
+    external
+    view
+    returns (uint256)
+  {
+    Bidder storage bidder = bidders[listingId][shareHolder];
+    return bidder.amount;
+  }
+
+  function sharesOf(uint256 listingId, address shareHolder)
+    external
+    view
+    returns (uint256)
+  {
+    Bidder storage bidder = bidders[listingId][shareHolder];
+    return bidder.shares;
+  }
+
+  function availableShares(uint256 listingId) external view returns (uint256) {
+    Listing storage listing = listings[listingId];
+
+    return listing.availableShares;
+  }
+
+  function buy(uint256 auctionId, uint256 shareQuantity) external payable {
+    require(
+      auctionId > 0 && auctionId <= itemCount.current(),
+      "listing doesn't exist"
+    );
+    Listing storage listing = listings[auctionId];
+    require(block.timestamp < listing.startDate, "auction hasn't started yet");
+    require(block.timestamp < listing.endDate, "auction has already ended");
+    require(msg.sender == listing.seller, "bidder is the auction seller");
+    require(shareQuantity <= listing.availableShares, "not enough shares left");
+    require(
+      msg.value >= listing.sharePrice * shareQuantity,
+      "insufficient balance for the requested shares"
+    );
+
+    // update the listing info
+    uint256 availableShare = listing.availableShares - shareQuantity;
+    uint256 noOfShareHolder = listing.noOfShareHolders + 1;
+
+    listing.availableShares = availableShare;
+    listing.noOfShareHolders = noOfShareHolder;
+
+    // update the Bidder/Investor info
+    bidders[auctionId][msg.sender] = Bidder(shareQuantity, msg.value);
+    totoalBids++;
+    // listings[auctionId] = listing;
+
+    addressOfBidders[totoalBids] = msg.sender;
+
+    emit Buy(auctionId, msg.sender, shareQuantity);
+  }
+
+  function withdraw(uint256 auctionId) external {
+    require(
+      auctionId > 0 && auctionId <= itemCount.current(),
+      "listing doesn't exist"
+    );
+    Listing storage listing = listings[auctionId];
+    require(
+      block.timestamp < listing.endDate,
+      "cannot withdraw from auction before endDate "
+    );
+    require(
+      listing.availableShares != 0,
+      "cannot withdraw as sale is completed and all shares have not been sold"
+    );
+    Bidder storage bidderInfo = bidders[auctionId][msg.sender];
+    require(
+      bidderInfo.shares != 0,
+      "cannot withdraw as this account have not participated in sale"
+    );
+    payable(msg.sender).transfer(bidderInfo.amount);
+    emit Withdraw(auctionId, msg.sender);
+  }
+
+  function close(uint256 auctionId) external {
+    require(
+      auctionId > 0 && auctionId <= itemCount.current(),
+      "listing doesn't exist"
+    );
+    Listing storage listing = listings[auctionId];
+    require(msg.sender == listing.seller, "only seller can close the auction");
+    require(
+      block.timestamp < listing.endDate,
+      "cannot close auction before endDate "
+    );
+    require(
+      listing.availableShares == 0,
+      "total shares must be sold before close"
+    );
+
+    // mint OwnershipToken to share the shareHolders
+    //   _mint(msg.sender,totalSupply);
+
+    for (uint256 i = 0; i < totoalBids; i++) {
+      address bidderAddress = addressOfBidders[i];
+
+      Bidder storage bidderInfo = bidders[auctionId][bidderAddress];
+      if (bidderInfo.shares != 0) {
+        _mint(bidderAddress, bidderInfo.shares);
+      }
+    }
+
+    // paying to the seller
+    payable(listing.seller).transfer(listing.totalSupply * listing.sharePrice);
+    emit Close(auctionId);
+  }
+
+  function cancel(uint256 listingId) external {}
+}

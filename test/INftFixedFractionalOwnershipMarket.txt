@@ -1,0 +1,467 @@
+import { ethers } from "hardhat";
+
+const { expect } = require("chai");
+
+async function getNetworkTimestamp() {
+  const block = await ethers.provider.getBlock("latest");
+  return block.timestamp;
+}
+
+describe("NFTFixedFractionalOwenership", function () {
+  let NFT;
+  let Store;
+  let nft: any;
+  let store: any;
+  let NFTFixedFractionalOwenership;
+  let nftFixedFractionalOwenership: any;
+  let deployer: any;
+  let deployerTwo: any;
+  let deployerStore: any;
+  let addr1: any;
+  let addr2: any;
+  let addr3: any;
+  let addr4: any;
+  let addrs: any;
+  let addr5: any;
+
+  let addrsEnglish: any;
+  let addrsStore: any;
+
+  const URI = "sample URI 1";
+
+  beforeEach(async function () {
+    NFT = await ethers.getContractFactory("Nft");
+    [deployer, addr1, addr2, ...addrs] = await ethers.getSigners();
+    // To deploy our contracts MeMusicNftStore
+    nft = await NFT.deploy();
+
+    // store
+    Store = await ethers.getContractFactory("NftStore");
+    [deployerStore, addr3, addr4, ...addrsStore] = await ethers.getSigners();
+    // To deploy our contracts MeMusicNftStore
+    store = await Store.deploy();
+
+    NFTFixedFractionalOwenership = await ethers.getContractFactory(
+      "NftFixedFractionalOwnershipMarket"
+    );
+    [deployerTwo, addr5, ...addrsEnglish] = await ethers.getSigners();
+
+    nftFixedFractionalOwenership = await NFTFixedFractionalOwenership.deploy(
+      "OwnershipToken",
+      "OST",
+      store.address
+    );
+  });
+
+  describe("fixedFractionalOwnership Listing", function () {
+    it("Should track each listing in fixedFractionalOwnership", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftFixedFractionalOwenership.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftFixedFractionalOwenership.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftFixedFractionalOwenership.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      await nftFixedFractionalOwenership
+        .connect(addr1)
+        .list(nft.address, 0, 50, 80, startDate, endDate);
+
+      let listings: any;
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(listings.id.toNumber()).to.equal(1);
+    });
+
+    it("shoud buy share ", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftFixedFractionalOwenership.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftFixedFractionalOwenership.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftFixedFractionalOwenership.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const sharePrice = 50;
+      const totalSupply = 80;
+      await nftFixedFractionalOwenership
+        .connect(addr1)
+        .list(nft.address, 0, sharePrice, totalSupply, startDate, endDate);
+
+      let listings: any;
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(listings.id.toNumber()).to.equal(1);
+
+      const shareQuantity = 2;
+      const buyFunction = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .buy(listings.id, shareQuantity, {
+          value: "100",
+        });
+
+      expect(buyFunction.value).to.equal("100");
+
+      const BidderInfo = await nftFixedFractionalOwenership.bidders(
+        1,
+        addr3.address
+      );
+
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const data = await nftFixedFractionalOwenership.totoalBids();
+      const data2 = await nftFixedFractionalOwenership.addressOfBidders(1);
+
+      expect(data2).to.equal(addr3.address);
+
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+    });
+
+    it("Should track priceOf", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftFixedFractionalOwenership.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftFixedFractionalOwenership.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftFixedFractionalOwenership.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const sharePrice = 50;
+      const totalSupply = 80;
+      await nftFixedFractionalOwenership
+        .connect(addr1)
+        .list(nft.address, 0, sharePrice, totalSupply, startDate, endDate);
+
+      let listings: any;
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(listings.id.toNumber()).to.equal(1);
+
+      const shareQuantity = 2;
+      const buyFunction = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .buy(listings.id, shareQuantity, {
+          value: "100",
+        });
+      expect(buyFunction.value).to.equal("100");
+
+      const BidderInfo = await nftFixedFractionalOwenership.bidders(
+        1,
+        addr3.address
+      );
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const data = await nftFixedFractionalOwenership.totoalBids();
+      const data2 = await nftFixedFractionalOwenership.addressOfBidders(1);
+
+      expect(data2).to.equal(addr3.address);
+
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const priceOf = await nftFixedFractionalOwenership
+        .connect(addr5)
+        .priceOf(1, data2);
+      expect(priceOf).to.equal(BidderInfo.amount);
+    });
+
+    it("Should track sharesOf", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftFixedFractionalOwenership.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftFixedFractionalOwenership.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftFixedFractionalOwenership.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const sharePrice = 50;
+      const totalSupply = 80;
+      await nftFixedFractionalOwenership
+        .connect(addr1)
+        .list(nft.address, 0, sharePrice, totalSupply, startDate, endDate);
+
+      let listings: any;
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(listings.id.toNumber()).to.equal(1);
+
+      const shareQuantity = 2;
+      const buyFunction = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .buy(listings.id, shareQuantity, {
+          value: "100",
+        });
+      expect(buyFunction.value).to.equal("100");
+
+      const BidderInfo = await nftFixedFractionalOwenership.bidders(
+        1,
+        addr3.address
+      );
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const data = await nftFixedFractionalOwenership.totoalBids();
+      const data2 = await nftFixedFractionalOwenership.addressOfBidders(1);
+
+      expect(data2).to.equal(addr3.address);
+
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const priceOf = await nftFixedFractionalOwenership
+        .connect(addr5)
+        .priceOf(1, data2);
+      expect(priceOf).to.equal(BidderInfo.amount);
+
+      const shareOf = await nftFixedFractionalOwenership
+        .connect(addr5)
+        .sharesOf(1, data2);
+      expect(shareOf.toNumber()).to.equal(shareQuantity);
+    });
+
+    it("Should track availableShares", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftFixedFractionalOwenership.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftFixedFractionalOwenership.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftFixedFractionalOwenership.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const sharePrice = 50;
+      const totalSupply = 80;
+      await nftFixedFractionalOwenership
+        .connect(addr1)
+        .list(nft.address, 0, sharePrice, totalSupply, startDate, endDate);
+
+      let listings: any;
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(listings.id.toNumber()).to.equal(1);
+      const shareQuantity = 2;
+      const buyFunction = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .buy(1, shareQuantity, {
+          value: "100",
+        });
+      expect(buyFunction.value).to.equal("100");
+
+      const listing = await nftFixedFractionalOwenership.listings(1);
+      const BidderInfo = await nftFixedFractionalOwenership.bidders(
+        1,
+        addr3.address
+      );
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const data = await nftFixedFractionalOwenership.totoalBids();
+      const data2 = await nftFixedFractionalOwenership.addressOfBidders(1);
+
+      expect(data2).to.equal(addr3.address);
+
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const priceOf = await nftFixedFractionalOwenership
+        .connect(addr5)
+        .priceOf(1, data2);
+      expect(priceOf).to.equal(BidderInfo.amount);
+
+      const shareOf = await nftFixedFractionalOwenership
+        .connect(addr5)
+        .sharesOf(1, data2);
+      expect(shareOf.toNumber()).to.equal(shareQuantity);
+
+      const availableshares = await nftFixedFractionalOwenership
+        .connect(addr1)
+        .availableShares(1);
+    });
+
+    it("Should withdraw share", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftFixedFractionalOwenership.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftFixedFractionalOwenership.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftFixedFractionalOwenership.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const sharePrice = 50;
+      const totalSupply = 80;
+      await nftFixedFractionalOwenership
+        .connect(addr1)
+        .list(nft.address, 0, sharePrice, totalSupply, startDate, endDate);
+
+      let listings: any;
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(listings.id.toNumber()).to.equal(1);
+
+      const shareQuantity = 2;
+      const buyFunction = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .buy(listings.id, shareQuantity, {
+          value: "100",
+        });
+      expect(buyFunction.value).to.equal("100");
+
+      const BidderInfo = await nftFixedFractionalOwenership.bidders(
+        1,
+        addr3.address
+      );
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const data = await nftFixedFractionalOwenership.totoalBids();
+      const data2 = await nftFixedFractionalOwenership.addressOfBidders(1);
+
+      expect(data2).to.equal(addr3.address);
+      expect(BidderInfo.shares.toNumber()).to.equal(shareQuantity);
+      const availableshares = await nftFixedFractionalOwenership
+        .connect(addr1)
+        .availableShares(1);
+      listings = await nftFixedFractionalOwenership.listings(1);
+
+      const withdraw = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .withdraw(1);
+    });
+    it("Close Auction", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftFixedFractionalOwenership.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftFixedFractionalOwenership.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftFixedFractionalOwenership.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const sharePrice = 1;
+      const totalSupply = 80;
+      await nftFixedFractionalOwenership
+        .connect(addr1)
+        .list(nft.address, 0, sharePrice, totalSupply, startDate, endDate);
+
+      let listings: any;
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(listings.id.toNumber()).to.equal(1);
+
+      const shareQuantity = 2;
+      const buyFunction = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .buy(listings.id, shareQuantity, {
+          value: ethers.utils.parseEther("2"),
+        });
+
+      const BidderInfo = await nftFixedFractionalOwenership.bidders(
+        1,
+        addr3.address
+      );
+      const data = await nftFixedFractionalOwenership.totoalBids();
+      const data2 = await nftFixedFractionalOwenership.addressOfBidders(1);
+
+      expect(data2).to.equal(addr3.address);
+      const availableshares = await nftFixedFractionalOwenership
+        .connect(addr1)
+        .availableShares(1);
+      listings = await nftFixedFractionalOwenership.listings(1);
+      expect(availableshares).to.equal(listings.availableShares);
+
+      const withdraw = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .withdraw(1);
+      const buyFunction2 = await nftFixedFractionalOwenership
+        .connect(addr3)
+        .buy(listings.id, 78, {
+          value: ethers.utils.parseEther("78"),
+        });
+
+      const close = await nftFixedFractionalOwenership.connect(addr3).close(1);
+    });
+  });
+});

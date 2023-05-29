@@ -1,0 +1,347 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0x3DBd6f489BEcD0FC2c037F6Bd6CB21403D40d904",
+    "txHash": "0x32d135a51fb4f502010837ccf8fa95ff80711fd78c41624509ddc4e971830a0b"
+  },
+  "proxies": [],
+  "impls": {
+    "9e9ec9ad416df4268425f0f49c8ac03f96a020c529775bcc5dc50c2f8cce55d9": {
+      "address": "0xcC3AceD41fec2CB3dAE138D262CcfCe2441434df",
+      "txHash": "0x228e4cfb309dfa53a91222d4edac7f764fbf90061484331e75fb18a66467fa73",
+      "layout": {
+        "storage": [
+          {
+            "label": "_listingIdCounter",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_struct(Counter)1349_storage",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:100"
+          },
+          {
+            "label": "_auctionIdCounter",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_struct(Counter)1349_storage",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:101"
+          },
+          {
+            "label": "_saleIdCounter",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_struct(Counter)1349_storage",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:102"
+          },
+          {
+            "label": "items",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_struct(Item)1683_storage))",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:104"
+          },
+          {
+            "label": "auctions",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_mapping(t_uint256,t_struct(Auction)1725_storage)",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:105"
+          },
+          {
+            "label": "auctionFunds",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_uint256))",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:106"
+          },
+          {
+            "label": "listings",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_mapping(t_uint256,t_struct(Listing)1703_storage)",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:107"
+          },
+          {
+            "label": "sales",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_mapping(t_uint256,t_struct(Sale)1738_storage)",
+            "contract": "ERC721Marketplace",
+            "src": "contracts\\Marketplace.sol:108"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_enum(AuctionStatus)1673": {
+            "label": "enum ERC721Marketplace.AuctionStatus",
+            "members": [
+              "active",
+              "closed",
+              "sold",
+              "cancelled"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_enum(ListingStatus)1668": {
+            "label": "enum ERC721Marketplace.ListingStatus",
+            "members": [
+              "active",
+              "sold",
+              "cancelled"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_mapping(t_uint256,t_struct(Item)1683_storage))": {
+            "label": "mapping(address => mapping(uint256 => struct ERC721Marketplace.Item))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(uint256 => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Auction)1725_storage)": {
+            "label": "mapping(uint256 => struct ERC721Marketplace.Auction)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Item)1683_storage)": {
+            "label": "mapping(uint256 => struct ERC721Marketplace.Item)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Listing)1703_storage)": {
+            "label": "mapping(uint256 => struct ERC721Marketplace.Listing)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Sale)1738_storage)": {
+            "label": "mapping(uint256 => struct ERC721Marketplace.Sale)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Auction)1725_storage": {
+            "label": "struct ERC721Marketplace.Auction",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokenId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "tokenAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "seller",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "startDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "endDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "startingPrice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "highestBidder",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "saleId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "status",
+                "type": "t_enum(AuctionStatus)1673",
+                "offset": 0,
+                "slot": "9"
+              }
+            ],
+            "numberOfBytes": "320"
+          },
+          "t_struct(Counter)1349_storage": {
+            "label": "struct Counters.Counter",
+            "members": [
+              {
+                "label": "_value",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(Item)1683_storage": {
+            "label": "struct ERC721Marketplace.Item",
+            "members": [
+              {
+                "label": "listingIds",
+                "type": "t_array(t_uint256)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "auctionIds",
+                "type": "t_array(t_uint256)dyn_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "saleIds",
+                "type": "t_array(t_uint256)dyn_storage",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Listing)1703_storage": {
+            "label": "struct ERC721Marketplace.Listing",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokenId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "tokenAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "seller",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "startDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "endDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "price",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "saleId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "status",
+                "type": "t_enum(ListingStatus)1668",
+                "offset": 0,
+                "slot": "8"
+              }
+            ],
+            "numberOfBytes": "288"
+          },
+          "t_struct(Sale)1738_storage": {
+            "label": "struct ERC721Marketplace.Sale",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokenId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "tokenAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "seller",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "buyer",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "price",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              }
+            ],
+            "numberOfBytes": "192"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    }
+  }
+}

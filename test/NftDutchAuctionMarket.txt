@@ -1,0 +1,161 @@
+import { ethers } from "hardhat";
+
+const { expect } = require("chai");
+
+async function getNetworkTimestamp() {
+  const block = await ethers.provider.getBlock("latest");
+  return block.timestamp;
+}
+
+describe("NFTDutchauction", function () {
+  let NFT;
+  let Store;
+  let nft: any;
+  let store: any;
+  let NFTDutchauction;
+  let nftDutchauction: any;
+  let deployer: any;
+  let deployerTwo: any;
+  let deployerStore: any;
+  let addr1: any;
+  let addr2: any;
+  let addr3: any;
+  let addr4: any;
+  let addrs: any;
+  let addrsDutch: any;
+  let addrsStore: any;
+  const URI = "sample URI 1";
+
+  beforeEach(async function () {
+    NFT = await ethers.getContractFactory("Nft");
+    [deployer, addr1, addr2, ...addrs] = await ethers.getSigners();
+    // To deploy our contracts MeMusicNftStore
+    nft = await NFT.deploy();
+
+    // store
+    Store = await ethers.getContractFactory("NftStore");
+    [deployerStore, addr3, addr4, ...addrsStore] = await ethers.getSigners();
+    // To deploy our contracts MeMusicNftStore
+    store = await Store.deploy();
+
+    // Get the ContractFactories and Signers here.
+    NFTDutchauction = await ethers.getContractFactory("NftDutchAuctionMarket");
+    [deployerTwo, ...addrsDutch] = await ethers.getSigners();
+
+    // To deploy our contracts
+    nftDutchauction = await NFTDutchauction.deploy(store.address);
+  });
+
+  describe("Auction Listing", function () {
+    it("Should track each listing in ductch auction market", async function () {
+      // addr1 mints an nft
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      const tokenId = await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      // list test nft.address, 1, 50, 20, 60000 startDate , enddate
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftDutchauction.address, nft.address, true);
+      expect(
+        await store.connect(addr1).isMarketApproved(nftDutchauction.address)
+      ).to.equal(true);
+
+      await nft.connect(addr1).setApprovalForAll(nftDutchauction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      await nftDutchauction
+        .connect(addr1)
+        .list(nft.address, 0, 50, 20, 60000, startDate, endDate);
+      const auction = await nftDutchauction.Auctions(1);
+      expect(auction.id.toNumber()).to.equal(1);
+      expect(auction.seller).to.equal(addr1.address);
+    });
+  });
+  describe("Price function", function () {
+    it("Should track Price in dutch auction market  ", async function () {
+      // addr1 mints an nft
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      const tokenId = await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftDutchauction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftDutchauction.address)
+      ).to.equal(true);
+
+      await nft.connect(addr1).setApprovalForAll(nftDutchauction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      await nftDutchauction
+        .connect(addr1)
+        .list(nft.address, 0, 50, 20, 60000, startDate, endDate);
+      const auction = await nftDutchauction.Auctions(1);
+      expect(auction.id.toNumber()).to.equal(1);
+
+      // price of function
+      const priceOf = await nftDutchauction.connect(addr2).priceOf(auction.id);
+    });
+  });
+  describe("buy function", function () {
+    it("Should track buy in dutch market  ", async function () {
+      // addr1 mints an nft
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      const tokenId = await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      // list test nft.address, 1, 50, 20, 60000 startDate , enddate
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftDutchauction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftDutchauction.address)
+      ).to.equal(true);
+
+      await nft.connect(addr1).setApprovalForAll(nftDutchauction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      await nftDutchauction
+        .connect(addr1)
+        .list(nft.address, 0, 50, 20, 60000, startDate, endDate);
+      const auction = await nftDutchauction.Auctions(1);
+      expect(auction.id.toNumber()).to.equal(1);
+
+      // price of function
+      const priceOf = await nftDutchauction.connect(addr4).priceOf(auction.id);
+
+      // buy function
+      const buyFunction = await nftDutchauction.connect(addr3).buy(auction.id, {
+        value: ethers.utils.parseEther(priceOf.toString()),
+      });
+      expect(await nft.ownerOf("0")).to.equal(addr3.address);
+    });
+  });
+});

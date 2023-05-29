@@ -1,0 +1,324 @@
+import { ethers } from "hardhat";
+
+const { expect } = require("chai");
+
+async function getNetworkTimestamp() {
+  const block = await ethers.provider.getBlock("latest");
+  return block.timestamp;
+}
+
+describe("NFTEnglishAuction", function () {
+  let NFT;
+  let Store;
+  let nft: any;
+  let store: any;
+  let NFTEnglishAuction;
+  let nftEnglishAuction: any;
+  let deployer: any;
+  let deployerTwo: any;
+  let deployerStore: any;
+  let addr1: any;
+  let addrs2: any;
+  let addrs3: any;
+  let addr2: any;
+  let addr3: any;
+  let addrs: any;
+  let addrsEnglish: any;
+  let addrsStore: any;
+  const URI = "sample URI 1";
+
+  beforeEach(async function () {
+    NFT = await ethers.getContractFactory("Nft");
+    [deployer, addr1, addr2, addrs2, addrs3, ...addrs] =
+      await ethers.getSigners();
+    // To deploy our contracts MeMusicNftStore
+    nft = await NFT.deploy();
+
+    // store
+    Store = await ethers.getContractFactory("NftStore");
+    [deployerStore, addr3, ...addrsStore] = await ethers.getSigners();
+    // To deploy our contracts MeMusicNftStore
+    store = await Store.deploy();
+
+    // Get the ContractFactories and Signers here.
+    NFTEnglishAuction = await ethers.getContractFactory(
+      "NftEnglishAuctionMarket"
+    );
+    [deployerTwo, ...addrsEnglish] = await ethers.getSigners();
+
+    // To deploy our contracts
+    nftEnglishAuction = await NFTEnglishAuction.deploy(store.address);
+  });
+
+  describe("English Auction Listing ", function () {
+    it("Should track each listing in english auction market ", async function () {
+      // addr1 mints an nft
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+
+      const startDate = (await getNetworkTimestamp()) + 3600;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftEnglishAuction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftEnglishAuction.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftEnglishAuction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const startingPrice = 50;
+      await nftEnglishAuction
+        .connect(addr1)
+        .list(nft.address, 0, startingPrice, startDate, endDate);
+
+      const auction = await nftEnglishAuction.auctions(1);
+      expect(auction.id.toNumber()).to.equal(1);
+    });
+
+    it("should track bid", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 5;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftEnglishAuction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftEnglishAuction.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftEnglishAuction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const startingPrice = 50;
+      await nftEnglishAuction
+        .connect(addr1)
+        .list(nft.address, 0, startingPrice, startDate, endDate);
+
+      const auctionid = await nftEnglishAuction.auctions(1);
+
+      const bidTwo = await nftEnglishAuction.connect(addrs2).bid(1, {
+        value: ethers.utils.parseEther("100"),
+      });
+
+      const bidThree = await nftEnglishAuction.connect(addrs3).bid(1, {
+        value: ethers.utils.parseEther("120"),
+      });
+      expect(bidThree.from).to.equal(addrs3.address);
+    });
+
+    it("should track highestBid", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 5;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftEnglishAuction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftEnglishAuction.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftEnglishAuction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const startingPrice = 50;
+      await nftEnglishAuction
+        .connect(addr1)
+        .list(nft.address, 0, startingPrice, startDate, endDate);
+
+      const auctionid = await nftEnglishAuction.auctions(1);
+
+      const bidTwo = await nftEnglishAuction.connect(addrs2).bid(1, {
+        value: ethers.utils.parseEther("100"),
+      });
+
+      const bidThree = await nftEnglishAuction.connect(addrs3).bid(1, {
+        value: ethers.utils.parseEther("120"),
+      });
+      const highestBid = await nftEnglishAuction.highestBid(1);
+      expect(await nftEnglishAuction.highestBid(1)).to.equal(highestBid);
+    });
+
+    it("shoud track biddOff", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 5;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftEnglishAuction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftEnglishAuction.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftEnglishAuction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const startingPrice = 50;
+      await nftEnglishAuction
+        .connect(addr1)
+        .list(nft.address, 0, startingPrice, startDate, endDate);
+
+      const auctionid = await nftEnglishAuction.auctions(1);
+
+      const bidTwo = await nftEnglishAuction.connect(addrs2).bid(1, {
+        value: ethers.utils.parseEther("100"),
+      });
+
+      const bidThree = await nftEnglishAuction.connect(addrs3).bid(1, {
+        value: ethers.utils.parseEther("120"),
+      });
+
+      const bidOff = await nftEnglishAuction.bidOf(1, addrs3.address);
+    });
+
+    it("should track withdraw", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 5;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftEnglishAuction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftEnglishAuction.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftEnglishAuction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const startingPrice = 50;
+      await nftEnglishAuction
+        .connect(addr1)
+        .list(nft.address, 0, startingPrice, startDate, endDate);
+
+      const auctionid = await nftEnglishAuction.auctions(1);
+
+      // bid more then starting bid
+      await nftEnglishAuction.connect(addrs2).bid(1, {
+        value: ethers.utils.parseEther("100"),
+      });
+
+      let currentAuction = await nftEnglishAuction.auctions("1");
+      // addr2 is highest bidder
+      expect(currentAuction.highestBidder).to.equal(addrs2.address);
+
+      // bid more then addr2
+      await nftEnglishAuction.connect(addrs3).bid(1, {
+        value: ethers.utils.parseEther("120"),
+      });
+
+      currentAuction = await nftEnglishAuction.auctions("1");
+
+      // addr3 is highest bidder
+      expect(currentAuction.highestBidder).to.equal(addrs3.address);
+
+      const bidOff = await nftEnglishAuction.bidOf(1, addrs3.address);
+
+      const highestBid = await nftEnglishAuction.highestBid(1);
+      expect(await nftEnglishAuction.highestBid(1)).to.equal(highestBid);
+      expect(ethers.utils.formatEther(bidOff.toString())).to.equal("120.0");
+
+      const withdraw = await nftEnglishAuction.connect(addrs2).withdraw(1);
+    });
+
+    it("should close the auction", async function () {
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+      const startDate = (await getNetworkTimestamp()) + 5;
+      const endDate = startDate + 3600 * 24 * 4;
+
+      await store.connect(deployerStore).approveProvider(nft.address, true);
+      expect(await store.isProviderApproved(nft.address)).to.equal(true);
+      await store
+        .connect(deployerStore)
+        .approveMarket(nftEnglishAuction.address, nft.address, true);
+      expect(
+        await store
+          .connect(deployerStore)
+          .isMarketApproved(nftEnglishAuction.address)
+      ).to.equal(true);
+
+      await nft
+        .connect(addr1)
+        .setApprovalForAll(nftEnglishAuction.address, true);
+      await nft.connect(addr1).setApprovalForAll(store.address, true);
+
+      const startingPrice = 50;
+      await nftEnglishAuction
+        .connect(addr1)
+        .list(nft.address, 0, startingPrice, startDate, endDate);
+
+      const auctionid = await nftEnglishAuction.auctions(1);
+
+      const bidTwo = await nftEnglishAuction.connect(addrs2).bid(1, {
+        value: ethers.utils.parseEther("100"),
+      });
+
+      const bidThree = await nftEnglishAuction.connect(addrs3).bid(1, {
+        value: ethers.utils.parseEther("120"),
+      });
+
+      const bidOff = await nftEnglishAuction.bidOf(1, addrs3.address);
+
+      const highestBid = await nftEnglishAuction.highestBid(1);
+      expect(await nftEnglishAuction.highestBid(1)).to.equal(highestBid);
+
+      const cancelFunction = await nftEnglishAuction.connect(addrs3).close(1);
+      const nftOwner = await nft.ownerOf("0");
+
+      // afte close highest bidder shold be the owner
+      expect(nftOwner).to.equal(addrs3.address);
+    });
+  });
+});

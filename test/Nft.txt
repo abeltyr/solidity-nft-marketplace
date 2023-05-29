@@ -1,0 +1,48 @@
+import { ethers } from "hardhat";
+const { expect } = require("chai");
+
+describe("NFTMarketplace", function () {
+  let NFT;
+  let nft: any;
+  let deployer: any;
+  let addr1: any;
+  let addr2: any;
+  let addrs: any;
+  const URI = "sample URI 1";
+  beforeEach(async function () {
+    // Get the ContractFactories and Signers here.
+
+    NFT = await ethers.getContractFactory("Nft");
+    [deployer, addr1, addr2, ...addrs] = await ethers.getSigners();
+
+    // To deploy our contracts
+    nft = await NFT.deploy();
+  });
+
+  describe("Deployment", function () {
+    it("Should track name and symbol of the nft collection", async function () {
+      // This test expects the owner variable stored in the contract to be equal
+      // to our Signer's owner.
+      const nftName = "MeMusicNFT";
+      const nftSymbol = "MNFT";
+      expect(await nft.name()).to.equal(nftName);
+      expect(await nft.symbol()).to.equal(nftSymbol);
+    });
+  });
+
+  describe("Minting NFTs", function () {
+    it("Should track each minted NFT", async function () {
+      // addr1 mints an nft
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr1.address);
+      expect(await nft.balanceOf(addr1.address)).to.equal(1);
+
+      // addr2 mints an nft
+      await nft.setBaseURI(URI);
+      expect(await nft.baseURI()).to.equal(URI);
+      await nft.connect(deployer).mint(addr2.address);
+      expect(await nft.balanceOf(addr2.address)).to.equal(1);
+    });
+  });
+});

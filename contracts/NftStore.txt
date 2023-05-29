@@ -1,0 +1,126 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+import "./interfaces/INftStore.sol";
+import "./interfaces/INftMarket.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+contract NftStore is Ownable {
+  struct Token {
+    address owner;
+  }
+
+  struct Listing {
+    address listingAddress;
+    uint256 listingId;
+  }
+
+  event ApproveMarket(address marketAddress, bool approved);
+  event ApproveProvider(address providerAddress, bool approved);
+  event Reserve(address tokenAddress, uint256 tokenId, address from);
+  event Release(address tokenAddress, uint256 tokenId, address to);
+  event List(address tokenAddress, uint256 tokenId, uint256 listingId);
+  event Unlist(address tokenAddress, uint256 tokenId, uint256 listingId);
+  event Clear(address tokenAddress, uint256 tokenId);
+
+  mapping(address => bool) private _approvedProviders;
+  mapping(address => bool) private _approvedMarkets;
+  mapping(address => mapping(uint256 => Token)) private _tokens;
+  mapping(address => mapping(uint256 => Listing[])) private _listings;
+
+  modifier approvedMarketOnly(address marketAddress) {
+    require(_approvedMarkets[marketAddress], "only approved market");
+    _;
+  }
+
+  modifier approvedProviderOnly(address providerAddress) {
+    require(_approvedProviders[providerAddress], "only approved provider");
+    _;
+  }
+
+  /// @notice Set an nft address as approved or not.
+  function approveProvider(address nftAddress, bool approved)
+    external
+    onlyOwner
+  {
+    _approvedProviders[nftAddress] = approved;
+    emit ApproveProvider(nftAddress, approved);
+  }
+
+  /// @notice Returns whether an nft address is approved.
+  function isProviderApproved(address nftAddress) external view returns (bool) {
+    return _approvedProviders[nftAddress];
+  }
+
+  /// @notice Set a market as approved or not.
+  function approveMarket(
+    address marketAddress,
+    address nftAddress,
+    bool approved
+  ) external onlyOwner {
+    _approvedMarkets[marketAddress] = approved;
+    IERC721 erc721 = IERC721(nftAddress);
+    erc721.setApprovalForAll(marketAddress, approved);
+    emit ApproveMarket(marketAddress, approved);
+  }
+
+  /// @notice Returns whether a market is approved.
+  function isMarketApproved(address marketAddress)
+    external
+    view
+    returns (bool)
+  {
+    return _approvedMarkets[marketAddress];
+  }
+
+  /// @notice Add a listing to a token.
+  function list(
+    address tokenAddress,
+    uint256 tokenId,
+    uint256 listingId
+  ) external approvedMarketOnly(msg.sender) approvedProviderOnly(tokenAddress) {
+    _listings[tokenAddress][tokenId].push(
+      Listing({listingId: listingId, listingAddress: msg.sender})
+    );
+
+    emit List(tokenAddress, tokenId, listingId);
+  }
+
+  /// @notice Remove a listing from a token.
+  function unlist(
+    address tokenAddress,
+    uint256 tokenId,
+    uint256 listingId
+  ) external approvedMarketOnly(msg.sender) approvedProviderOnly(tokenAddress) {
+    int256 listingIndex = -1;
+    for (uint256 i = 0; i < _listings[tokenAddress][tokenId].length; i++) {
+      Listing memory listing = _listings[tokenAddress][tokenId][i];
+      if (
+        listing.listingAddress == msg.sender && listing.listingId == listingId
+      ) {
+        listingIndex = int256(i);
+        break;
+      }
+    }
+    require(listingIndex >= 0, "listing not found");
+    _listings[tokenAddress][tokenId][
+      _listings[tokenAddress][tokenId].length - 1
+    ] = _listings[tokenAddress][tokenId][uint256(listingIndex)];
+    _listings[tokenAddress][tokenId].pop();
+
+    emit Unlist(tokenAddress, tokenId, listingId);
+  }
+
+  /// @notice Remove all listing from a token.
+  function clear(address tokenAddress, uint256 tokenId) external {
+    for (uint256 i = 0; i < _listings[tokenAddress][tokenId].length; i++) {
+      Listing memory listing = _listings[tokenAddress][tokenId][i];
+      INftMarket market = INftMarket(listing.listingAddress);
+      market.cancel(listing.listingId);
+    }
+    delete _listings[tokenAddress][tokenId];
+
+    emit Clear(tokenAddress, tokenId);
+  }
+}
